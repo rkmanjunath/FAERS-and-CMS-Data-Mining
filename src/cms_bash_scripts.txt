@@ -1,0 +1,104 @@
+# Step by step approach to arrive at the final CMS File.
+
+  Notes: Make sure all the input file names as below and '*' in between the file names indicate any alphanumeric character.
+	Make sure you create a new working folder to ensure there are only below valid input files.
+	Beneficiary: DE1*Inpatient*.csv
+	Prescription: DE1*Prescription*.csv
+	Inpatient: DE1*Inpatient*.csv
+
+====================================================================================================================================
+
+# Step 1: Manually verify to make sure the entire Beneficiary files have the same number of columns.
+
+	head -1 DE1*Beneficiary*.csv > ben_header.csv
+
+# Step 2: Manually verify to make sure the entire Inpatient files have the same number of columns.
+
+	head -1 DE1*Inpatient*.csv > Inp_header.csv
+
+# Step 3: Manually verify to  make sure the entire Prescription files have the same number of columns.
+
+	head -1 DE1*Prescription*.csv > pde_header.csv
+
+# Step 4: Delete the files Post manual verification of all the columns, column names, order and data type.
+
+	rm ben_header.csv
+	rm Inp_header.csv
+	rm pde_header.csv
+
+# Step 5: Merge all the Beneficiary downloaded files.
+
+	cat DE1*Beneficiary*.csv > ben_temp.csv
+
+# Step 6: Extract the required columns from the merged Beneficiary file.
+
+	paste -d "," <( cut -d "," -f 1,2,3,4 ben_temp.csv) > ben_cut.csv
+
+# Step 7: Sort the Beneficiary records and eliminate any duplicates.
+
+	sort -u ben_cut.csv > ben_final.csv
+
+# Step 8: Remove Beneficiary temporary files.
+
+	rm ben_cut.csv
+	rm ben_temp.csv
+
+# Step 9: Merge all the Prescription downloaded files.
+
+	cat DE1*Prescription*.csv > pde_temp.csv
+
+# Step 10: Extract the required columns from the merged Prescription file.
+
+	paste -d "," <( cut -d "," -f 1,4,5 pde_temp.csv) > pde_cut.csv
+
+# Step 11: Sort the Prescription records and eliminate any duplicates.
+
+	sort -u pde_cut.csv > pde_final.csv
+
+# Step 12: Remove Prescription temporary files.
+
+	rm pde_cut.csv
+	rm pde_temp.csv
+
+# Step 13: Merge all the Inpatient downloaded files.
+
+	cat DE1*Inpatient*.csv > inp_temp.csv
+
+# Step 14: Extract the required columns from the merged Inpatient file.
+
+	paste -d "," <( cut -d "," -f 1,13,21,22,23,24,25,26,27,28,29,30 inp_temp.csv) > inp_cut.csv
+
+# Step 15: Sort the Inpatient records and eliminate any duplicates.
+
+	sort -u inp_cut.csv > inp_final.csv
+
+# Step 16: Remove Inpatient temporary files.
+
+	rm inp_cut.csv
+	rm inp_temp.csv
+
+# Step 17: Join Prescription data with Inpatient data.
+
+	join -t, <(sort -t, -k1 pde_final.csv) <(sort -t, -k1 inp_final.csv) > pde_inp.csv
+
+# Step 18: Join Beneficiary data with previous join between Prescription and Inpatient data to generate final CMS file.
+
+	join -t, <(sort -t, -k1 ben_final.csv) <(sort -t, -k1 pde_inp.csv) > cms.csv
+
+# Step 19: Remove temporary Prescription and Inpatient join data file.
+
+	rm pde_inp.csv
+	rm pde_final.csv
+	rm inp_final.csv
+	rm ben_final.csv
+
+====================================================================================================================================
+
+
+# Single Step approach to arrive at final CMS file. All the above commands from Step 5 to Step 18 has been put in sequential order.
+
+  #### NOTE: Step 1 thru Step 4 must be run separately to ensure every input files are verified accurately for data consistency.
+
+====================================================================================================================================
+
+cat DE1*Beneficiary*.csv > ben_temp.csv;paste -d "," <( cut -d "," -f 1,2,3,4 ben_temp.csv) > ben_cut.csv;sort -u ben_cut.csv > ben_final.csv;cat DE1*Prescription*.csv > pde_temp.csv;paste -d "," <( cut -d "," -f 1,4,5 pde_temp.csv) > pde_cut.csv;sort -u pde_cut.csv > pde_final.csv;cat DE1*Inpatient*.csv > inp_temp.csv;paste -d "," <( cut -d "," -f 1,13,21,22,23,24,25,26,27,28,29,30 inp_temp.csv) > inp_cut.csv;sort -u inp_cut.csv > inp_final.csv;join -t, <(sort -t, -k1 pde_final.csv) <(sort -t, -k1 inp_final.csv) > pde_inp.csv;join -t, <(sort -t, -k1 ben_final.csv) <(sort -t, -k1 pde_inp.csv) > cms.csv;ben_header.csv;Inp_header.csv;pde_header.csv;rm ben_cut.csv;rm ben_temp.csv;rm pde_cut.csv;rm pde_temp.csv;rm inp_cut.csv;rm inp_temp.csv;rm pde_inp.csv;rm pde_final.csv;rm inp_final.csv;rm ben_final.csv

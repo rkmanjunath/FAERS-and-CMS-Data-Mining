@@ -1,0 +1,140 @@
+# Step by step approach to arrive at the final Faers File.
+
+  Notes: Make sure all the input file names as below and '*' in between the file names indicate any alphanumeric character.
+	Make sure you create a new working folder to ensure there are only below valid input files.
+	Demographic: DEMO*.txt
+	Reaction: REAC*.txt
+	Drug: DRUG*.txt
+====================================================================================================================================
+
+# Step 1: Manually verify to make sure the entire Demographic files have the same number of columns.
+
+	head -1 DEMO*.txt > Demo_header.txt
+
+# Step 2: Manually verify to make sure the entire Reaction files have the same number of columns.
+
+	head -1 REAC*.txt > Reac_header.txt
+
+# Step 3: Manually verify to make sure the entire Drug files have the same number of columns.
+
+	head -1 DRUG*.txt > Drug_header.txt
+
+  #### NOTE: During the manual verification input file 2014 Q2 across Demographic, reaction and Drug was having differences in the number and names of the columns. Hence it was ignored in the further processing.
+
+# Step 4: Delete the files Post manual verification of all the columns, column names, order and data type.
+
+	rm Demo_header.txt
+	rm Reac_header.txt
+	rm Drug_header.txt
+
+# Step 5: Separate the header and tail records. Create Demographic header record from any one of the Demographic input file and merge all files tail records.
+
+	head -1 DEMO14Q3.txt > demohead_temp.txt && tail -n +2 -q DEMO*.txt | sort -k1,1 -n -t$ > demotmp1.txt
+
+# Step 6: Extract the required columns from the merged Demographic tail file.
+
+	paste -d '$' <(cut -d "$" -f 1,14,15,17,23 demotmp1.txt) > demotmp2.txt
+
+# Step 7: Extract the required matching column names from the demographic header file.
+
+	paste -d '$' <(cut -d "$" -f 1,14,15,17,23 demohead_temp.txt) > demo_head.txt
+
+# Step 8: Filter the demographics records created by Physician, Pharmacist and Other health care professional.
+
+	awk -F "$" ' ($5=="MD") || ($5 == "PH") || ($5 == "OT") ' demotmp2.txt > demo_hcp.txt
+
+# Step 9: Remove Demographic temporary files.
+
+	rm demotmp1.txt
+	rm demotmp2.txt
+
+# Step 10: Separate the header and tail records. Create Reaction header record from any one of the Reaction input file and merge all files tail records.
+
+	head -1 REAC14Q3.txt > reachead_temp.txt && tail -n +2 -q REAC*.txt | sort -k1,1 -n -t$ > reactmp1.txt
+
+# Step 11: Extract the required columns from the merged Reaction tail file.
+
+	paste -d '$' <(cut -d "$" -f 1,3 reactmp1.txt) > reaction_final.txt
+
+# Step 12: Extract the required matching column names from the Reaction header file.
+
+	paste -d '$' <(cut -d "$" -f 1,3 reachead_temp.txt) > reaction_head.txt
+
+# Step 13: Remove Reaction temporary files.
+
+	rm reactmp1.txt
+
+# Step 14: Separate the header and tail records. Create Drug header record from any one of the Drug input file and merge all files tail records.
+
+	head -1 DRUG14Q3.txt > drughead_temp.txt && tail -n +2 -q DRUG*.txt | sort -k1,1 -n -t$ > drugtmp1.txt
+
+# Step 15: Extract the required columns from the merged Drug tail file.
+
+	paste -d '$' <(cut -d "$" -f 1,4,5,6,8,9,16,17,18,19,20 drugtmp1.txt) > drugtmp2.txt
+
+# Step 16: Extract the required matching column names from the Drug header file.
+
+	paste -d '$' <(cut -d "$" -f 1,4,5,6,8,9,16,17,18,19,20 drughead_temp.txt) > drug_head.txt
+
+# Step 17: Filter the drug records to eliminate those without dosage verbatim
+
+	awk -F "$" '($6 != "" ) || ($6 != " " )' drugtmp2.txt > drug_final.txt
+
+  #### NOTE: This step was skipped during the process by considering all records regardeless of dosage verbatim at this stage. Used drugtmp2.txt file as drug_final.txt.
+
+# Step 18: Remove Drug temporary files.
+
+	rm drugtmp1.txt
+	rm drugtmp2.txt
+
+# Step 19: Join Reaction tail data with Demographic tail data.
+
+	join -j 1 -t$ <(sort -t$ -k1,1 reaction_final.txt) <(sort -t$ -k1,1 demo_hcp.txt) > comb.txt
+
+# Step 20: Join Drug data with previous join between Reaction and Demographic data to generate final faers tail file.
+
+	join -j 1 -t$ <(sort -t$ -k1,1 comb.txt) <(sort -t$ -k1,1 drug_final.txt) > faers_tail.txt
+
+# Step 21: Remove temporary Reaction and Demographic tail data
+
+	rm comb.txt
+	rm reaction_final.txt
+	rm demo_hcp.txt
+	rm drug_final.txt
+
+# Step 22: Join Reaction header data with Demographic header data.
+
+	join -1 1 -2 1 -t $ reaction_head.txt demo_head.txt > head_temp.txt
+
+# Step 23: Join Drug header data with previous join between Reaction and Demographic header data to generate final faers header file.
+
+	join -1 1 -2 1 -t $ head_temp.txt  drug_head.txt > faers_head.txt
+
+# Step 24: Remove temporary Reaction and Demographic header data.
+
+	rm head_temp.txt
+	rm reaction_head.txt
+	rm demo_head.txt
+	rm drug_head.txt
+
+# Step 25: Create final faers file by merging the faers header first followed by faers tail records.
+
+	cat faers_head.txt faers_tail.txt > faers.txt
+
+# Step 26: Delete the temoprary header and tail faers files.
+
+	rm faers_head.txt
+	rm faers_tail.txt
+
+
+====================================================================================================================================
+
+
+# Single Step approach to arrive at final faers file. All the above commands from Step 5 to Step 26 has been put in sequential order.
+
+  #### NOTE: Step 1 thru Step 4 must be run separately to ensure every input files are verified accurately for data consistency.
+
+
+====================================================================================================================================
+
+head -1 DEMO14Q3.txt > demohead_temp.txt && tail -n +2 -q DEMO*.txt | sort -k1,1 -n -t$ > demotmp1.txt;paste -d '$' <(cut -d "$" -f 1,14,15,17,23 demotmp1.txt) > demotmp2.txt;awk -F "$" ' ($5=="MD") || ($5 == "PH") || ($5 == "OT") ' demotmp2.txt > demo_hcp.txt;head -1 REAC14Q3.txt > reachead_temp.txt && tail -n +2 -q REAC*.txt | sort -k1,1 -n -t$ > reactmp1.txt;paste -d '$' <(cut -d "$" -f 1,3 reactmp1.txt) > reaction_final.txt;head -1 DRUG14Q3.txt > drughead_temp.txt && tail -n +2 -q DRUG*.txt | sort -k1,1 -n -t$ > drugtmp1.txt;paste -d '$' <(cut -d "$" -f 1,4,5,6,8,9,16,17,18,19,20 drugtmp1.txt) > drug_final.txt;paste -d '$' <(cut -d "$" -f 1,14,15,17,23 demohead_temp.txt) > demo_head.txt;paste -d '$' <(cut -d "$" -f 1,3 reachead_temp.txt) > reaction_head.txt;paste -d '$' <(cut -d "$" -f 1,4,5,6,8,9,16,17,18,19,20 drughead_temp.txt) > drug_head.txt;join -j 1 -t$ <(sort -t$ -k1,1 reaction_final.txt) <(sort -t$ -k1,1 demo_hcp.txt) > comb.txt;join -j 1 -t$ <(sort -t$ -k1,1 comb.txt) <(sort -t$ -k1,1 drug_final.txt) > faers_tail.txt;join -1 1 -2 1 -t $ reaction_head.txt demo_head.txt > head_temp.txt;join -1 1 -2 1 -t $ head_temp.txt  drug_head.txt > faers_head.txt;cat faers_head.txt faers_tail.txt > faers.txt;rm Demo_header.txt;rm Reac_header.txt;rm Drug_header.txt;rm demotmp1.txt;rm demotmp2.txt;rm reactmp1.txt;rm drugtmp1.txt;rm drugtmp2.txt;rm comb.txt;rm reaction_final.txt;rm demo_hcp.txt;rm drug_final.txt;rm head_temp.txt;rm reaction_head.txt;rm demo_head.txt;rm drug_head.txt;rm faers_head.txt;rm faers_tail.txt
