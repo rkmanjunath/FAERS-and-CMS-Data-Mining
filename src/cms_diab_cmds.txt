@@ -1,0 +1,64 @@
+# Step by step approach to arrive at the cms file with patients prescribed with diabetes drugs:
+The same approach can be used to extract patients prescribed with drugs for hypertension, depression etc.
+The NDC code list was obtained from data.gov website
+Total Diabetis NDC code list from data.gov: 4335
+
+In the final CMS master file (the file resulting from executing commands in cms_cmds.txt),
+
+Total CMS records extracted: 85873407
+Total patients from the CMS file having atleast drug code from the NDC diabetis code list: 325889
+Total CMS records for patient prsecribed with diabetis drugs (from data.gov NDC list): 68009030
+Percentage of inpatients prescribed with diabetes drugs: 79.2%
+
+========================================================================================================================
+Step by step approach to arrive at the final cms file
+
+# Step 1: Copy and paste the list of NDC into a text file ndccodes.txt. Convert the txt file into an csv file by
+eliminatig carriage return.
+
+	sed 's/ \+/,/g' ndccodes.txt > ndctmp01.csv
+
+# Step 2: Delete the manually created txt file.
+
+	sort -u ndctmp01.csv > ndcdisease.csv
+
+# Step 3: Delete the temporary work file.
+
+	rm ndctmp01.csv
+
+# Step 4: Extract the columns beneficiary id/DESYNPUF_ID and NDC codes/PROD_SRVC_ID from the CMS master file.
+
+	awk -F, '{print $1,$5}' OFS=, cms.csv > cmsndclist.csv
+
+# Step 5: Join the input NDC codes with CMS file NDCs to get the corresponding beneficiary ID's
+
+	join -t, -1 1 -2 2 <(sort -t, -k1 ndcdisease.csv) <(sort -t, -k2 cmsndclist.csv) > ndccmstmp01.csv
+
+# Step 6: extract the list of beneficiaries for the input list of ndc codes.
+
+	awk -F, '{print $2}' OFS=, ndccmstmp01.csv > patienttemp01.csv
+
+# Step 7: eliminate the duplicates and sort the file
+
+	sort -u patienttemp01.csv > patient.csv
+
+# Step 8: Extract all CMS information for beneficiaries with diabetes drugs NDCs
+
+	join -t, <(sort -t, -k1 cms.csv) <(sort -t, -k1 patient.csv) > cmspatndc.csv
+
+# Step 9: Delete the temporary work files.
+
+	rm ndccmstmp01.csv
+	rm patienttemp01.csv
+	rm patient.csv
+
+# Step 10: Copy the cms master header into separate file.
+
+	head -1 cms.csv > cms_header.csv
+
+# Step 11: Merge the cms header record with the diabetes cms file information.
+
+	cat cms_header.csv cmspatndc.csv > cms_diabetic.csv
+
+# The above commands in one step
+sed 's/ \+/,/g' ndccodes.txt > ndctmp01.csv;sort -u ndctmp01.csv > ndcdisease.csv;rm ndctmp01.csv;join -t, -1 1 -2 2 <(sort -t, -k1 ndcdisease.csv) <(sort -t, -k2 cmsndclist.csv) > ndccmstmp01.csv;awk -F, '{print $2}' OFS=, ndccmstmp01.csv > patienttemp01.csv;sort -u patienttemp01.csv > patient.csv;join -t, <(sort -t, -k1 cms.csv) <(sort -t, -k1 patient.csv) > cmspatndc.csv;rm ndccmstmp01.csv;rm patienttemp01.csv;rm patient.csv
