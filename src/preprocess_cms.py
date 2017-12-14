@@ -28,13 +28,10 @@ def getrx(ndc):
         if response.status_code == 200:  # status code 200 implies that the request has succeeded in which case,
             rx = response.json()
             rxCUI = rx['rxcui']
-            print ndc, rxCUI
             return ndc, rxCUI  # if yes returns ndc and corresponding rxcui
         else:  # for status codes other than 200, the status code
-            print response.status_code, response.raise_for_status()  # and the message are returned.
             return
     except requests.exceptions.RequestException as e:
-        print "Error: " + str(e)
         return
 
 
