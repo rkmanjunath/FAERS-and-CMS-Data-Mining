@@ -1,4 +1,5 @@
-# FAERS Data Mining #
+# FAERS and CMS Data Mining #
+## Python and Bash pipeline to extract and clean data for analysis ##
 
 The objective is to identify adverse drug events (ADEs) in the CMS claims data 
 with the aid of information from the US Food and Drug Administration (FDA) 
